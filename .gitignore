@@ -36,3 +36,5 @@ tags
 .vscode
 # Windows logs
 *.log
+
+spotifyd

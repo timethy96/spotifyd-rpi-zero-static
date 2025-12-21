@@ -1,5 +1,31 @@
 # Spotifyd <!-- omit in toc -->
 
+## Static Cross-Compilation for Raspberry Pi Zero W (ARMv6)
+
+This repository includes a `Dockerfile` configured to produce a fully static `spotifyd` binary for the Raspberry Pi Zero W (ARMv6) using **Zig** and **Musl**.
+
+### Build
+```bash
+docker build -t spotifyd-rpi-zero .
+```
+
+### Extract Binary
+```bash
+# Create a dummy container (image is scratch-based)
+docker create --name temp-spotifyd spotifyd-rpi-zero /spotifyd
+
+# Copy binary to host
+docker cp temp-spotifyd:/spotifyd ./spotifyd
+
+# Cleanup
+docker rm temp-spotifyd
+```
+
+The resulting `./spotifyd` binary is statically linked and requires no dependencies on the Pi.
+
+---
+
+
 [![Matrix][matrix-badge]](https://matrix.to/#/#spotifyd:matrix.org)
 [![GitHub Workflow Status][cd-badge]][github-actions]
 [![Github Actions - CI][ci-badge]][github-actions]
