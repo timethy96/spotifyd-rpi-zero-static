@@ -6,11 +6,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install build tools and utils
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    cmake \
     curl \
     git \
     wget \
     xz-utils \
     bzip2 \
+    nasm \
     pkg-config \
     ca-certificates \
     perl \
