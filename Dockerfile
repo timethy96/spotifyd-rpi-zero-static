@@ -1,77 +1,3 @@
-# ── Build ALSA-lib (Static) ─────────────────────────────────────────────────
-WORKDIR /tmp
-
-# 1. Download & Extract - ALSA-lib 1.2.10 (stable, widely compatible)
-RUN curl -fLO https://www.alsa-project.org/alsa-releases/alsa-lib-1.2.10.tar.bz2 && \
-    tar -xf alsa-lib-1.2.10.tar.bz2
-
-# Compiler Check to debug
-RUN echo 'int main(){return 0;}' > test.c && \
-    arm-linux-musleabihf-gcc test.c -o test && \
-    rm test test.c
-
-# 2. Configure
-RUN cd alsa-lib-1.2.10 && \
-    ./configure \
-    --host=arm-linux-musleabihf \
-    --prefix=/build/sysroot/usr \
-    --disable-shared \
-    --enable-static \
-    --disable-python \
-    --disable-topology \
-    --with-configdir=/usr/share/alsa \
-    CC="arm-linux-musleabihf-gcc" \
-    AR="arm-linux-musleabihf-ar" \
-    RANLIB="arm-linux-musleabihf-ranlib" > /dev/null
-
-# 3. Build & Install
-RUN cd alsa-lib-1.2.10 && \
-    make -j$(nproc) > /dev/null && \
-    make install > /dev/null
-
-# ── Rust Toolchain ───────────────────────────────────────────────────────────
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-RUN rustup target add arm-unknown-linux-musleabihf
-
-# ── Build Env ────────────────────────────────────────────────────────────────
-ENV PKG_CONFIG_ALLOW_CROSS=1
-ENV PKG_CONFIG_ALL_STATIC=1
-ENV PKG_CONFIG_PATH=/build/sysroot/usr/lib/pkgconfig
-
-# Force cc-rs to use our wrapper
-ENV CC_arm_unknown_linux_musleabihf=arm-linux-musleabihf-gcc
-ENV CXX_arm_unknown_linux_musleabihf=arm-linux-musleabihf-g++
-ENV AR_arm_unknown_linux_musleabihf=arm-linux-musleabihf-ar
-
-# Prevent Rust from linking its bundled Musl startup files (conflict with Zig)
-ENV RUSTFLAGS="-C link-self-contained=no"
-
-# ── Build Spotifyd ───────────────────────────────────────────────────────────
-WORKDIR /build/spotifyd
-COPY . .
-RUN rm -rf target
-
-# Switch to bash for pipefail
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-RUN pkg-config --list-all
-RUN pkg-config --modversion alsa
-
-# We use the generic Cargo build now.
-RUN cargo build \
-    --release \
-    --target=arm-unknown-linux-musleabihf \
-    --no-default-features \
-    --features alsa_backend \
-    --config "target.arm-unknown-linux-musleabihf.linker='arm-linux-musleabihf-gcc'" -v > build.log 2>&1 || (cat build.log && exit 1)
-
-RUN cat build.log
-
-# ── Export ───────────────────────────────────────────────────────────────────
-FROM scratch AS export
-COPY --from=0 /build/spotifyd/target/arm-unknown-linux-musleabihf/release/spotifyd .
-
 # ── Base setup ────────────────────────────────────────────────────────────────
 FROM debian:bookworm
 
@@ -149,3 +75,78 @@ RUN echo '#!/bin/bash' > /usr/local/bin/arm-linux-musleabihf-ar && \
 RUN echo '#!/bin/bash' > /usr/local/bin/arm-linux-musleabihf-ranlib && \
     echo 'exec zig ranlib "$@"' >> /usr/local/bin/arm-linux-musleabihf-ranlib && \
     chmod +x /usr/local/bin/arm-linux-musleabihf-ranlib
+
+# ── Build ALSA-lib (Static) ─────────────────────────────────────────────────
+WORKDIR /tmp
+
+# 1. Download & Extract - ALSA-lib 1.2.10 (stable, widely compatible)
+RUN curl -fLO https://www.alsa-project.org/alsa-releases/alsa-lib-1.2.10.tar.bz2 && \
+    tar -xf alsa-lib-1.2.10.tar.bz2
+
+# Compiler Check to debug
+RUN echo 'int main(){return 0;}' > test.c && \
+    arm-linux-musleabihf-gcc test.c -o test && \
+    rm test test.c
+
+# 2. Configure
+RUN cd alsa-lib-1.2.10 && \
+    ./configure \
+    --host=arm-linux-musleabihf \
+    --prefix=/build/sysroot/usr \
+    --disable-shared \
+    --enable-static \
+    --disable-python \
+    --disable-topology \
+    --with-configdir=/usr/share/alsa \
+    CC="arm-linux-musleabihf-gcc" \
+    AR="arm-linux-musleabihf-ar" \
+    RANLIB="arm-linux-musleabihf-ranlib" > /dev/null
+
+# 3. Build & Install
+RUN cd alsa-lib-1.2.10 && \
+    make -j$(nproc) > /dev/null && \
+    make install > /dev/null
+
+# ── Rust Toolchain ───────────────────────────────────────────────────────────
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup target add arm-unknown-linux-musleabihf
+
+# ── Build Env ────────────────────────────────────────────────────────────────
+ENV PKG_CONFIG_ALLOW_CROSS=1
+ENV PKG_CONFIG_ALL_STATIC=1
+ENV PKG_CONFIG_PATH=/build/sysroot/usr/lib/pkgconfig
+
+# Force cc-rs to use our wrapper
+ENV CC_arm_unknown_linux_musleabihf=arm-linux-musleabihf-gcc
+ENV CXX_arm_unknown_linux_musleabihf=arm-linux-musleabihf-g++
+ENV AR_arm_unknown_linux_musleabihf=arm-linux-musleabihf-ar
+
+# Prevent Rust from linking its bundled Musl startup files (conflict with Zig)
+ENV RUSTFLAGS="-C link-self-contained=no"
+
+# ── Build Spotifyd ───────────────────────────────────────────────────────────
+WORKDIR /build/spotifyd
+COPY . .
+RUN rm -rf target
+
+# Switch to bash for pipefail
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN pkg-config --list-all
+RUN pkg-config --modversion alsa
+
+# We use the generic Cargo build now.
+RUN cargo build \
+    --release \
+    --target=arm-unknown-linux-musleabihf \
+    --no-default-features \
+    --features alsa_backend \
+    --config "target.arm-unknown-linux-musleabihf.linker='arm-linux-musleabihf-gcc'" -v > build.log 2>&1 || (cat build.log && exit 1)
+
+RUN cat build.log
+
+# ── Export ───────────────────────────────────────────────────────────────────
+FROM scratch AS export
+COPY --from=0 /build/spotifyd/target/arm-unknown-linux-musleabihf/release/spotifyd .
+
