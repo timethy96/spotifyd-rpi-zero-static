@@ -79,9 +79,9 @@ RUN echo '#!/bin/bash' > /usr/local/bin/arm-linux-musleabihf-ranlib && \
 # ── Build ALSA-lib (Static) ─────────────────────────────────────────────────
 WORKDIR /tmp
 
-# 1. Download & Extract - ALSA-lib 1.2.10 (stable, widely compatible)
-RUN curl -fLO https://www.alsa-project.org/alsa-releases/alsa-lib-1.2.10.tar.bz2 && \
-    tar -xf alsa-lib-1.2.10.tar.bz2
+# 1. Download & Extract - ALSA-lib 1.2.9 (stable, widely compatible)
+RUN curl -fLO https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.9.tar.bz2 && \
+    tar -xf alsa-lib-1.2.9.tar.bz2
 
 # Compiler Check to debug
 RUN echo 'int main(){return 0;}' > test.c && \
@@ -89,7 +89,7 @@ RUN echo 'int main(){return 0;}' > test.c && \
     rm test test.c
 
 # 2. Configure
-RUN cd alsa-lib-1.2.10 && \
+RUN cd alsa-lib-1.2.9 && \
     ./configure \
     --host=arm-linux-musleabihf \
     --prefix=/build/sysroot/usr \
@@ -103,7 +103,7 @@ RUN cd alsa-lib-1.2.10 && \
     RANLIB="arm-linux-musleabihf-ranlib" > /dev/null
 
 # 3. Build & Install
-RUN cd alsa-lib-1.2.10 && \
+RUN cd alsa-lib-1.2.9 && \
     make -j$(nproc) > /dev/null && \
     make install > /dev/null
 
