@@ -17,12 +17,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker Image
-        # We use --progress=plain to verify logs in CI if needed
         run: docker build -t spotifyd-rpi-zero . --progress=plain
 
       - name: Extract Static Binary
         run: |
-          # Create dummy container to copy file out (image is scratch-based)
           docker create --name extract spotifyd-rpi-zero /spotifyd
           docker cp extract:/spotifyd ./spotifyd-linux-armv6-musl-static
           docker rm extract
@@ -30,8 +28,6 @@ jobs:
       - name: Verify Binary Architecture
         run: |
           sudo apt-get update && sudo apt-get install -y file
-          file ./spotifyd-linux-armv6-musl-static
-          # Basic sanity check
           file ./spotifyd-linux-armv6-musl-static | grep "ARM"
           file ./spotifyd-linux-armv6-musl-static | grep "statically linked"
 
@@ -44,8 +40,7 @@ jobs:
           prerelease: true
           body: |
             Automatic nightly build for Raspberry Pi Zero W (ARMv6).
-            Fully static configuration (Zig + Musl + ALSA + OpenSSL).
-            
+
             **Triggered by:** ${{ github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
