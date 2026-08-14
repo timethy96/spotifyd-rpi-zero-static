@@ -110,12 +110,12 @@ RUN cd alsa-lib-1.2.9 && \
 # ── Build OpenSSL (Static) ───────────────────────────────────────────────────
 WORKDIR /tmp
 
-# 1. Download & Extract - OpenSSL 3.0.15 (LTS, widely compatible)
-RUN curl -fLO https://www.openssl.org/source/openssl-3.0.15.tar.gz && \
-    tar -xf openssl-3.0.15.tar.gz
+# 1. Download & Extract - OpenSSL 1.1.1w (LTS, compatible with Zig musl cross-compile)
+RUN curl -fLO https://www.openssl.org/source/openssl-1.1.1w.tar.gz && \
+    tar -xf openssl-1.1.1w.tar.gz
 
 # 2. Configure
-RUN cd openssl-3.0.15 && \
+RUN cd openssl-1.1.1w && \
     ./Configure linux-generic32 \
     --prefix=/build/sysroot/usr \
     --openssldir=/build/sysroot/usr/ssl \
@@ -126,7 +126,7 @@ RUN cd openssl-3.0.15 && \
     RANLIB="arm-linux-musleabihf-ranlib" > /dev/null
 
 # 3. Build & Install
-RUN cd openssl-3.0.15 && \
+RUN cd openssl-1.1.1w && \
     make -j$(nproc) > /dev/null && \
     make install_sw > /dev/null
 
