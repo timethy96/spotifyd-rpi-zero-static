@@ -107,6 +107,29 @@ RUN cd alsa-lib-1.2.9 && \
     make -j$(nproc) > /dev/null && \
     make install > /dev/null
 
+# ── Build OpenSSL (Static) ───────────────────────────────────────────────────
+WORKDIR /tmp
+
+# 1. Download & Extract - OpenSSL 3.0.15 (LTS, widely compatible)
+RUN curl -fLO https://www.openssl.org/source/openssl-3.0.15.tar.gz && \
+    tar -xf openssl-3.0.15.tar.gz
+
+# 2. Configure
+RUN cd openssl-3.0.15 && \
+    ./Configure linux-generic32 \
+    --prefix=/build/sysroot/usr \
+    --openssldir=/build/sysroot/usr/ssl \
+    no-shared \
+    no-tests \
+    CC="arm-linux-musleabihf-gcc" \
+    AR="arm-linux-musleabihf-ar" \
+    RANLIB="arm-linux-musleabihf-ranlib" > /dev/null
+
+# 3. Build & Install
+RUN cd openssl-3.0.15 && \
+    make -j$(nproc) > /dev/null && \
+    make install_sw > /dev/null
+
 # ── Rust Toolchain ───────────────────────────────────────────────────────────
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
@@ -116,6 +139,10 @@ RUN rustup target add arm-unknown-linux-musleabihf
 ENV PKG_CONFIG_ALLOW_CROSS=1
 ENV PKG_CONFIG_ALL_STATIC=1
 ENV PKG_CONFIG_PATH=/build/sysroot/usr/lib/pkgconfig
+
+# Point to manually built OpenSSL (spotifyd uses openssl directly)
+ENV OPENSSL_DIR=/build/sysroot/usr
+ENV OPENSSL_STATIC=1
 
 # Force cc-rs to use our wrapper
 ENV CC_arm_unknown_linux_musleabihf=arm-linux-musleabihf-gcc
